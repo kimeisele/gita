@@ -205,7 +205,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-# Cloned source repositories (for reference only)
-steward-protocol/
-prabhupada_os/
