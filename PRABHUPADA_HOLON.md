@@ -124,3 +124,36 @@ This plugin demonstrates how to build AI systems that:
 ---
 
 *"We do not change the books. We change how the world accesses them."*
+
+---
+
+## Local Development
+
+The plugin is committed in `steward-protocol/` (local clone):
+
+```bash
+cd steward-protocol
+git log --oneline -3
+# c20c074 feat: Add TaskKernel-based semantic search (Ouroboros)
+# 8db7c0f feat: Add Prabhupada Wisdom Holon Plugin
+# ... (main)
+
+# To push to your fork:
+git push -u origin claude/prabhupada-holon-uGBsA
+```
+
+### Files Created
+
+| File | Description |
+|------|-------------|
+| `manifest.json` | SOVEREIGN_STATE governance |
+| `plugin_main.py` | WisdomKernel (600 lines) |
+| `CONSTITUTION.md` | No Speculation Protocol |
+| `knowledge/vedabase.db` | 700 verses (4.4MB) |
+| `knowledge/vectors.pkl` | 384-dim embeddings (1.7MB) |
+| `knowledge/concepts.yaml` | Concept ontology |
+| `circuits/query_wisdom.yaml` | SRUTI→SMRITI pipeline |
+| `circuits/no_speculation.yaml` | Constitutional guard |
+| `circuits/semantic_search.yaml` | TaskKernel-based search |
+| `tools/semantic_tools.py` | Real computation tools |
+| `manas/methodology.yaml` | Prabhupada's approach |
