@@ -1,0 +1,155 @@
+{
+  "type": "plugin",
+  "id": "prabhupada",
+  "name": "Prabhupada Wisdom Holon",
+  "version": "1.0.0",
+  "description": "Neuro-symbolic wisdom interface implementing No Speculation Protocol (SRUTI/SMRITI separation)",
+  "entry_point": "plugin_main.py",
+  "entry_class": "PrabhupadaPlugin",
+  "priority": 40,
+  "enabled": true,
+  "governance": {
+    "_comment": "SOVEREIGN_STATE: Can spawn TaskKernels, has autonomous operation",
+    "type": "SOVEREIGN_STATE",
+    "constitution_ref": "CONSTITUTION.md",
+    "autonomy_level": "high",
+    "can_spawn_task_kernel": true,
+    "has_sovereign_state": true,
+    "emergency_protocol": "admit_ignorance",
+    "state_directory": ".prabhupada_state"
+  },
+  "hooks": [
+    "on_boot",
+    "on_shutdown",
+    "on_query"
+  ],
+  "dependencies": [],
+  "capabilities": [
+    "prabhupada.query",
+    "prabhupada.verify",
+    "prabhupada.methodology",
+    "prabhupada.ground",
+    "prabhupada.cite",
+    "prabhupada.cli"
+  ],
+  "tools_for_agents": {
+    "_comment": "GAD-000: Tools designed for AI operators, not humans",
+    "verify_claim": {
+      "purpose": "Check if a claim is authorized by SRUTI",
+      "returns": {"authorized": "bool", "citations": "array", "confidence": "float"}
+    },
+    "ground_in_sruti": {
+      "purpose": "Ground a synthesis in scriptural evidence",
+      "returns": {"grounded_text": "string", "sruti_refs": "array"}
+    },
+    "get_methodology": {
+      "purpose": "Get Prabhupada's approach to a topic",
+      "returns": {"approach": "string", "steps": "array", "citations": "array"}
+    },
+    "check_speculation": {
+      "purpose": "Detect speculation in text",
+      "returns": {"speculation_score": "float", "flagged_phrases": "array"}
+    },
+    "cite_authority": {
+      "purpose": "Generate proper citation for a claim",
+      "returns": {"citation": "string", "verse_id": "string", "context": "string"}
+    }
+  },
+  "knowledge": {
+    "database": "knowledge/vedabase.db",
+    "vectors": "knowledge/vectors.pkl",
+    "concepts": "knowledge/concepts.yaml",
+    "methodology": "manas/methodology.yaml"
+  },
+  "state": {
+    "dir": ".prabhupada_state",
+    "files": {
+      "query_history": "query_history.jsonl",
+      "karma_log": "karma_log.jsonl"
+    },
+    "git_tracked": true
+  },
+  "circuits": [
+    "circuits/query_wisdom.yaml",
+    "circuits/no_speculation.yaml",
+    "circuits/parampara_check.yaml"
+  ],
+  "cli": {
+    "namespace": "gita",
+    "commands": [
+      {
+        "name": "search",
+        "handler": "cmd_gita_search",
+        "execution_mode": "offline",
+        "help": "Semantic search in Bhagavad-gita",
+        "args": [
+          {"name": "query", "type": "str", "required": true, "help": "Search query"},
+          {"name": "limit", "type": "int", "default": 5, "help": "Max results"},
+          {"name": "json", "type": "bool", "default": true, "help": "JSON output (GAD-000)"}
+        ]
+      },
+      {
+        "name": "verse",
+        "handler": "cmd_gita_verse",
+        "execution_mode": "offline",
+        "help": "Get specific verse by ID",
+        "args": [
+          {"name": "verse_id", "type": "str", "required": true, "help": "Verse ID (e.g., BG.2.13)"},
+          {"name": "json", "type": "bool", "default": true, "help": "JSON output (GAD-000)"}
+        ]
+      },
+      {
+        "name": "ask",
+        "handler": "cmd_wisdom_ask",
+        "execution_mode": "hybrid",
+        "help": "Ask wisdom question (SRUTI + SMRITI synthesis)",
+        "args": [
+          {"name": "question", "type": "str", "required": true, "help": "Your question"},
+          {"name": "json", "type": "bool", "default": true, "help": "JSON output (GAD-000)"}
+        ]
+      },
+      {
+        "name": "verify",
+        "handler": "cmd_wisdom_verify",
+        "execution_mode": "offline",
+        "help": "Verify claim against SRUTI",
+        "args": [
+          {"name": "claim", "type": "str", "required": true, "help": "Claim to verify"},
+          {"name": "json", "type": "bool", "default": true, "help": "JSON output (GAD-000)"}
+        ]
+      },
+      {
+        "name": "method",
+        "handler": "cmd_wisdom_method",
+        "execution_mode": "offline",
+        "help": "Get Prabhupada's methodology for a topic",
+        "args": [
+          {"name": "topic", "type": "str", "required": true, "help": "Topic to explore"},
+          {"name": "json", "type": "bool", "default": true, "help": "JSON output (GAD-000)"}
+        ]
+      },
+      {
+        "name": "status",
+        "handler": "cmd_gita_status",
+        "execution_mode": "offline",
+        "help": "Show database and plugin status",
+        "args": [
+          {"name": "json", "type": "bool", "default": true, "help": "JSON output (GAD-000)"}
+        ]
+      }
+    ]
+  },
+  "defaults": {
+    "no_speculation": true,
+    "citation_required": true,
+    "confidence_threshold": 0.6
+  },
+  "author": "STEWARD Protocol",
+  "tags": [
+    "wisdom",
+    "vedic",
+    "constitutional",
+    "no-speculation",
+    "sruti-smriti"
+  ]
+}

@@ -1,0 +1,309 @@
+# PRABHUPADA SEMANTIC SEARCH CIRCUIT
+# ===================================
+# Revolutionary: TaskKernel-based semantic search
+#
+# Philosophy:
+# "An embedding without computation is a hallucination.
+#  A search without vectors is keyword matching.
+#  But mathematics can approximate meaning without ML."
+#
+# Architecture (v3 - BM25 Primary):
+#   Query → TaskKernel (Ephemeral)
+#            → BM25 Search (No ML Required!)
+#            → Concept Ranking (SRUTI alignment)
+#            → Fold Result (Ouroboros!)
+#
+#   Fallback paths:
+#            → Vector Search (if sentence-transformers available)
+#            → FTS5 (last resort)
+
+circuit:
+  id: "prabhupada.semantic_search"
+  name: "Semantic Wisdom Search"
+  version: "3.0.0"
+  type: "ephemeral_compute"  # Spawns TaskKernel
+
+  description: |
+    Neuro-symbolic semantic search using ephemeral TaskKernels.
+    BM25 provides semantic-like ranking WITHOUT ML dependencies.
+    Vector search available when sentence-transformers installed.
+
+states:
+  - id: "RECEIVE_QUERY"
+    description: "Validate and prepare query for semantic processing"
+    invariants:
+      - "query.text.length > 0"
+      - "query.text.length < 500"
+    actions:
+      - type: "LOG"
+        level: "INFO"
+        message: "Semantic search initiated: ${input.query}"
+    transitions:
+      - on: "valid"
+        to: "SPAWN_KERNEL"
+      - on: "invalid"
+        to: "REJECT"
+
+  - id: "SPAWN_KERNEL"
+    description: "Spawn ephemeral TaskKernel for search computation"
+    action:
+      type: "TASK_KERNEL_SPAWN"
+      config:
+        timeout_seconds: 30
+        tools:
+          - "bm25_search"
+          - "concept_align"
+          - "embedding_compute"  # Optional - requires ML
+          - "vector_search"      # Optional - requires ML
+          - "fts_search"         # Fallback
+        isolation: "SANDBOX"
+        caller_plugin: "prabhupada"
+    invariants:
+      - "kernel.spawned == true"
+      - "kernel.sandbox_id exists"
+    transitions:
+      - on: "spawned"
+        to: "BM25_SEARCH"
+      - on: "spawn_failed"
+        to: "FALLBACK_KEYWORD"
+
+  - id: "BM25_SEARCH"
+    description: "BM25 semantic-like search (NO ML REQUIRED)"
+    action:
+      type: "TOOL_CALL"
+      tool: "bm25_search"
+      parameters:
+        query: "${input.query}"
+        top_k: 10
+    invariants:
+      - "result.method == 'bm25'"
+      - "result.ml_required == false"
+    output:
+      raw_results: "${result.matches}"
+      search_method: "bm25"
+    transitions:
+      - on: "found"
+        condition: "results.count > 0"
+        to: "CONCEPT_ALIGN"
+      - on: "not_found"
+        condition: "results.count == 0"
+        to: "TRY_VECTOR_SEARCH"
+      - on: "error"
+        to: "FALLBACK_KEYWORD"
+
+  - id: "TRY_VECTOR_SEARCH"
+    description: "Try vector search if BM25 found nothing"
+    action:
+      type: "CONDITIONAL"
+      check: "sentence_transformers_available"
+    transitions:
+      - on: "available"
+        to: "EMBED_QUERY"
+      - on: "unavailable"
+        to: "FALLBACK_KEYWORD"
+
+  - id: "EMBED_QUERY"
+    description: "Compute 384-dimensional embedding for query (requires ML)"
+    action:
+      type: "TOOL_CALL"
+      tool: "embedding_compute"
+      parameters:
+        text: "${input.query}"
+        model: "all-MiniLM-L6-v2"
+        dimension: 384
+    invariants:
+      - "embedding.shape == (384,)"
+      - "embedding.dtype == float32"
+    output:
+      query_embedding: "${result.embedding}"
+    transitions:
+      - on: "computed"
+        to: "VECTOR_SEARCH"
+      - on: "model_not_found"
+        to: "FALLBACK_KEYWORD"
+
+  - id: "VECTOR_SEARCH"
+    description: "Search verse embeddings using cosine similarity"
+    action:
+      type: "TOOL_CALL"
+      tool: "vector_search"
+      parameters:
+        query_embedding: "${state.query_embedding}"
+        vectors_path: "knowledge/vectors.pkl"
+        top_k: 10
+        similarity_threshold: 0.3
+    invariants:
+      - "results.all_have_score"
+      - "results.all_have_verse_id"
+    output:
+      raw_results: "${result.matches}"
+      search_method: "vector"
+    transitions:
+      - on: "found"
+        condition: "results.count > 0"
+        to: "CONCEPT_ALIGN"
+      - on: "not_found"
+        condition: "results.count == 0"
+        to: "NO_MATCH"
+
+  - id: "CONCEPT_ALIGN"
+    description: "Re-rank results using concept alignment"
+    action:
+      type: "TOOL_CALL"
+      tool: "concept_align"
+      parameters:
+        query: "${input.query}"
+        candidates: "${state.raw_results}"
+        concepts_path: "knowledge/concepts.yaml"
+    output:
+      ranked_results: "${result.ranked}"
+      concept_matches: "${result.concepts}"
+    transitions:
+      - on: "ranked"
+        to: "FOLD_RESULT"
+
+  - id: "FOLD_RESULT"
+    description: "Fold results back to parent (Ouroboros)"
+    action:
+      type: "TASK_KERNEL_FOLD"
+      result:
+        status: "success"
+        method: "${state.search_method}"
+        verses: "${state.ranked_results}"
+        concepts: "${state.concept_matches}"
+        ml_required: false
+        speculation_score: 0.0
+    transitions:
+      - on: "folded"
+        to: "END"
+
+  - id: "FALLBACK_KEYWORD"
+    description: "Fallback to FTS when all else fails"
+    action:
+      type: "TOOL_CALL"
+      tool: "fts_search"
+      parameters:
+        query: "${input.query}"
+        table: "verses_fts"
+        limit: 10
+    output:
+      fallback_results: "${result.matches}"
+    karma:
+      - event: "SEMANTIC_FALLBACK"
+        reason: "BM25 and vector search both failed"
+        severity: "WARN"
+    transitions:
+      - on: "found"
+        to: "FOLD_FALLBACK"
+
+  - id: "FOLD_FALLBACK"
+    description: "Fold fallback results (with degradation warning)"
+    action:
+      type: "TASK_KERNEL_FOLD"
+      result:
+        status: "degraded"
+        method: "keyword_fts"
+        verses: "${state.fallback_results}"
+        warning: "Using FTS fallback - both BM25 and vector search unavailable"
+        ml_required: false
+    transitions:
+      - on: "folded"
+        to: "END"
+
+  - id: "NO_MATCH"
+    description: "No verses found for query"
+    action:
+      type: "TASK_KERNEL_FOLD"
+      result:
+        status: "no_match"
+        method: "${state.search_method}"
+        verses: []
+        message: "No verses found matching query"
+    transitions:
+      - on: "folded"
+        to: "END"
+
+  - id: "REJECT"
+    description: "Reject invalid query"
+    action:
+      type: "TASK_KERNEL_FOLD"
+      result:
+        status: "rejected"
+        error: "Invalid query format"
+    transitions:
+      - on: "folded"
+        to: "END"
+
+  - id: "END"
+    terminal: true
+
+# Dharma: Immutable principles
+dharma:
+  - "BM25 is the primary search method (no ML required)"
+  - "Vector search is optional enhancement (requires 4GB model)"
+  - "All results traced to SRUTI source"
+  - "Fallback is explicit, not silent"
+
+# Karma: Events logged to ledger
+karma:
+  - event: "SEMANTIC_SEARCH_START"
+    on_state: "RECEIVE_QUERY"
+  - event: "TASK_KERNEL_SPAWNED"
+    on_state: "SPAWN_KERNEL"
+  - event: "BM25_SEARCH_COMPLETE"
+    on_state: "BM25_SEARCH"
+  - event: "VECTOR_SEARCH_COMPLETE"
+    on_state: "VECTOR_SEARCH"
+  - event: "RESULT_FOLDED"
+    on_state: "FOLD_RESULT"
+
+# Tools required for this circuit
+required_tools:
+  - name: "bm25_search"
+    description: "BM25 semantic-like search (NO ML REQUIRED)"
+    parameters:
+      query: "string"
+      top_k: "int (default: 10)"
+    returns:
+      matches: "array of {verse_id, score, translation}"
+      method: "string (always 'bm25')"
+      ml_required: "bool (always false)"
+
+  - name: "embedding_compute"
+    description: "Compute text embedding using sentence-transformers (OPTIONAL)"
+    parameters:
+      text: "string"
+      model: "string (default: all-MiniLM-L6-v2)"
+    returns:
+      embedding: "ndarray (384,)"
+    requires:
+      - "sentence-transformers (4GB download)"
+
+  - name: "vector_search"
+    description: "Search vectors using cosine similarity (OPTIONAL)"
+    parameters:
+      query_embedding: "ndarray (384,)"
+      vectors_path: "string"
+      top_k: "int"
+    returns:
+      matches: "array of {verse_id, score}"
+    requires:
+      - "pre-computed vectors.pkl"
+
+  - name: "concept_align"
+    description: "Re-rank using concept ontology"
+    parameters:
+      query: "string"
+      candidates: "array"
+      concepts_path: "string"
+    returns:
+      ranked: "array"
+      concepts: "array of matched concepts"
+
+  - name: "fts_search"
+    description: "SQLite FTS5 search (last resort fallback)"
+    parameters:
+      query: "string"
+      table: "string"
+    returns:
+      matches: "array"
