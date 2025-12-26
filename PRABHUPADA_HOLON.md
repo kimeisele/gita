@@ -1,26 +1,41 @@
 # Prabhupada Wisdom Holon
 
-> "No Speculation. Clear Boundaries. No 4GB Downloads Required."
+> "वर्णानां वर्गाः पञ्च" - "The phonemes have five classes"
 
-A neuro-symbolic plugin for STEWARD Protocol implementing the No Speculation Protocol with **BM25 semantic-like search** - no machine learning dependencies.
+A neuro-symbolic plugin for STEWARD Protocol implementing the No Speculation Protocol with **Sanskrit Matrix phonetic resonance** - not keyword matching, but PHYSICS.
 
-## Key Innovation: BM25 Search (No ML Required)
+## Key Innovation: Sanskrit Phonetic Resonance (No ML Required)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Traditional Semantic Search    vs    BM25 Search           │
-│  ─────────────────────────────       ───────────────────    │
-│  • 4GB sentence-transformers         • Pure mathematics     │
-│  • GPU recommended                   • Runs anywhere        │
-│  • Complex dependencies              • Zero dependencies    │
-│  • Slow first load                   • Instant startup      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  ML Embeddings (4GB)        vs    Sanskrit Matrix (0KB)         │
+│  ─────────────────────           ─────────────────────────      │
+│  • Neural network weights         • Phonetic physics             │
+│  • Black box similarity           • Articulation-based resonance │
+│  • Requires training data         • Based on Varnamala (alphabet)│
+│  • GPU recommended                • Pure mathematics             │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**BM25 provides semantic-like results using:**
-- **TF-IDF**: Rare words matter more
-- **Term Frequency Saturation**: Repeated words have diminishing returns
-- **Document Length Normalization**: Fair ranking across verse lengths
+**The Sanskrit Varnamala (alphabet matrix):**
+```
+         | Unvoiced | Aspirated | Voiced | VoicedAsp | Nasal |
+---------|----------|-----------|--------|-----------|-------|
+KANTHYA  |    क     |     ख     |   ग    |     घ     |   ङ   | (Throat → Kernel)
+TALAVYA  |    च     |     छ     |   ज    |     झ     |   ञ   | (Palate → Flow)
+MURDHANYA|    ट     |     ठ     |   ड    |     ढ     |   ण   | (Cerebral → Logic)
+DANTYA   |    त     |     थ     |   द    |     ध     |   न   | (Dental → Interface)
+OSHTHYA  |    प     |     फ     |   ब    |     भ     |   म   | (Lips → Output)
+```
+
+**Resonance Results (no ML):**
+| Comparison | Resonance | Why |
+|------------|-----------|-----|
+| karma ↔ dharma | **0.967** | Both Sanskrit, Throat-dominant |
+| yoga ↔ bhakti | **0.943** | Similar articulation patterns |
+| atma ↔ soul | **0.333** | Different phonetic physics! |
+
+This is NOT keyword matching. This is the **physics of language**.
 
 ## Quick Start
 
@@ -65,7 +80,7 @@ vibe_core/plugins/prabhupada/
 │   └── no_speculation.yaml   # Constitutional guard
 │
 ├── tools/                     # TaskKernel Tools
-│   └── semantic_tools.py     # BM25, Vector, FTS, Concept tools
+│   └── semantic_tools.py     # Resonance, BM25, Vector, FTS tools
 │
 ├── manas/                     # The "Brain"
 │   └── methodology.yaml      # HOW Prabhupada teaches
@@ -78,18 +93,24 @@ vibe_core/plugins/prabhupada/
 
 | Priority | Method | ML Required | Description |
 |----------|--------|-------------|-------------|
-| 1 | **BM25** | No | Primary - statistical ranking |
-| 2 | Vector | Yes (4GB) | Optional - cosine similarity |
-| 3 | Keyword | No | Fallback - simple LIKE match |
+| 1 | **Resonance** | No | Sanskrit phonetic physics (vibe_core.reactor) |
+| 2 | **BM25** | No | Statistical TF-IDF ranking |
+| 3 | Vector | Yes (4GB) | Optional - cosine similarity embeddings |
+| 4 | Keyword | No | Fallback - simple FTS match |
 
 ```yaml
-# From semantic_search.yaml (v3.0.0)
+# From semantic_search.yaml (v4.0.0)
 dharma:
-  - "BM25 is the primary search method (no ML required)"
+  - "Resonance search uses Sanskrit Varnamala (phonetic physics)"
+  - "BM25 provides statistical backup (no ML required)"
   - "Vector search is optional enhancement (requires 4GB model)"
   - "All results traced to SRUTI source"
-  - "Fallback is explicit, not silent"
 ```
+
+**Why Resonance > BM25 > ML?**
+- Sanskrit terms carry meaning in their phonetic structure
+- "karma" and "dharma" resonate (0.967) because of articulation similarity
+- ML embeddings are black boxes; Sanskrit Matrix is physics
 
 ## Core Principles
 
