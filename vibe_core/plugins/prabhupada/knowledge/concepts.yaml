@@ -25,8 +25,18 @@ core_concepts:
 
   karma:
     name: "Activities"
-    aliases: ["action", "work", "duty", "reaction", "fruitive"]
+    aliases: ["action", "work", "reaction", "fruitive"]
     key_verses: ["BG 3.5", "BG 3.9", "BG 4.17", "BG 18.2"]
+
+  dharma:
+    name: "Righteousness"
+    aliases: ["duty", "religion", "righteousness", "religious principles", "law"]
+    key_verses: ["BG 1.40", "BG 2.7", "BG 3.35", "BG 18.66"]
+
+  moksha:
+    name: "Liberation"
+    aliases: ["liberation", "mukti", "freedom", "release", "salvation", "emancipation"]
+    key_verses: ["BG 4.16", "BG 5.28", "BG 18.66"]
 
 yoga_systems:
   karma_yoga:

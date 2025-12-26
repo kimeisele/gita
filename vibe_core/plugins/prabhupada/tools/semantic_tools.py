@@ -500,6 +500,7 @@ class BM25SearchTool:
         self._avgdl = 0
         self._idf = {}
         self._doc_lens = []
+        self._synonyms = None  # Auto-built from vedabase word-for-word
 
     def _tokenize(self, text: str) -> List[str]:
         """Simple tokenization - lowercase and split."""
@@ -556,6 +557,100 @@ class BM25SearchTool:
 
         logger.info(f"BM25 index built: {N} documents, {len(self._idf)} unique terms")
 
+    def _build_synonyms(self):
+        """Build synonym map from vedabase.db word-for-word translations."""
+        if self._synonyms is not None:
+            return
+
+        import re
+        self._synonyms = {}  # word -> set of synonyms
+
+        if not self._db_path.exists():
+            logger.warning(f"Database not found: {self._db_path}")
+            return
+
+        conn = sqlite3.connect(str(self._db_path))
+        cursor = conn.cursor()
+        cursor.execute('SELECT synonyms FROM verses WHERE synonyms IS NOT NULL')
+
+        # Diacritics mapping for normalization
+        diacritics = {
+            'ā': 'a', 'ī': 'i', 'ū': 'u', 'ṛ': 'r', 'ṝ': 'r',
+            'ḷ': 'l', 'ḹ': 'l', 'ṃ': 'm', 'ḥ': 'h', 'ṅ': 'n',
+            'ñ': 'n', 'ṭ': 't', 'ḍ': 'd', 'ṇ': 'n', 'ś': 's', 'ṣ': 's'
+        }
+
+        def normalize(text: str) -> str:
+            """Remove diacritics for matching."""
+            result = text.lower()
+            for dia, plain in diacritics.items():
+                result = result.replace(dia, plain)
+            return result
+
+        # Parse all word-for-word translations from Prabhupada
+        sanskrit_to_english = {}  # sanskrit -> set of english meanings
+        english_to_sanskrit = {}  # english word -> set of sanskrit terms
+
+        for (synonyms,) in cursor.fetchall():
+            if not synonyms:
+                continue
+
+            # Format: "word—meaning;word—meaning"
+            for part in synonyms.split(';'):
+                if '—' not in part:
+                    continue
+                sanskrit, english = part.split('—', 1)
+                sanskrit_norm = normalize(sanskrit.strip())
+                english_lower = english.strip().lower()
+
+                # Skip very short terms
+                if len(sanskrit_norm) < 3:
+                    continue
+
+                # Build Sanskrit → English
+                if sanskrit_norm not in sanskrit_to_english:
+                    sanskrit_to_english[sanskrit_norm] = set()
+                sanskrit_to_english[sanskrit_norm].add(english_lower)
+
+                # Build English → Sanskrit (extract key words)
+                for word in re.findall(r'\b[a-z]{4,}\b', english_lower):
+                    if word not in english_to_sanskrit:
+                        english_to_sanskrit[word] = set()
+                    english_to_sanskrit[word].add(sanskrit_norm)
+
+        conn.close()
+
+        # Build English→English synonym map through Sanskrit bridge
+        # If "soul" → "atma" and "atma" → "self", then "soul" → "self"
+        for english, sanskrit_terms in english_to_sanskrit.items():
+            if english not in self._synonyms:
+                self._synonyms[english] = set()
+
+            # For each Sanskrit term this English word maps to
+            for sanskrit in sanskrit_terms:
+                if sanskrit in sanskrit_to_english:
+                    # Get all English meanings of that Sanskrit term
+                    for meaning in sanskrit_to_english[sanskrit]:
+                        # Extract English words from the meaning
+                        for word in re.findall(r'\b[a-z]{4,}\b', meaning):
+                            if word != english:  # Don't add self
+                                self._synonyms[english].add(word)
+
+        logger.info(f"Synonym map built from vedabase: {len(self._synonyms)} English terms")
+
+    def _expand_query(self, query: str) -> List[str]:
+        """Expand query with synonyms from vedabase word-for-word translations."""
+        self._build_synonyms()
+
+        words = query.lower().split()
+        expanded = set(words)
+
+        for word in words:
+            if word in self._synonyms:
+                expanded.update(self._synonyms[word])
+
+        return list(expanded)
+
     def _bm25_score(self, query_tokens: List[str], doc_idx: int) -> float:
         """Compute BM25 score for a document."""
         import math
@@ -605,8 +700,16 @@ class BM25SearchTool:
 
             query = parameters["query"]
             top_k = parameters.get("top_k", 10)
+            expand = parameters.get("expand", True)  # Enable query expansion by default
 
-            query_tokens = self._tokenize(query)
+            # Expand query with synonyms if enabled
+            if expand:
+                expanded_terms = self._expand_query(query)
+                query_text = " ".join(expanded_terms)
+            else:
+                query_text = query
+
+            query_tokens = self._tokenize(query_text)
 
             if not query_tokens:
                 return ToolResult(
@@ -634,7 +737,7 @@ class BM25SearchTool:
                     "translation": translation[:200],
                 })
 
-            logger.info(f"BM25 search: {len(matches)} matches for '{query}'")
+            logger.info(f"BM25 search: {len(matches)} matches for '{query}' (expanded: {expand})")
 
             return ToolResult(
                 success=True,
@@ -642,7 +745,10 @@ class BM25SearchTool:
                     "matches": matches,
                     "count": len(matches),
                     "method": "bm25",
+                    "original_query": query,
                     "query_terms": query_tokens,
+                    "expanded": expand,
+                    "expansion_terms": expanded_terms if expand else [query],
                     "ml_required": False,  # Key differentiator!
                 },
             )
