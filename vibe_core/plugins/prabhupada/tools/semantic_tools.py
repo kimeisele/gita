@@ -913,6 +913,251 @@ class ResonanceSearchTool:
 
 
 # =============================================================================
+# AI-NATIVE SEMANTIC SEARCH (GAD-000 Compliant)
+# =============================================================================
+
+
+class AISemanticSearchTool:
+    """
+    AI-Native Semantic Search - Designed for AI Operators (GAD-000).
+
+    Philosophy:
+        "The AI is the operator. The human provides intent."
+
+    This tool is designed for AI agents (like Claude) to operate on behalf
+    of humans. It provides rich structured output that helps the AI:
+    1. Understand the semantic context of the query
+    2. Find relevant verses with multiple search methods
+    3. Get suggested follow-up actions
+    4. Build responses with proper citations
+
+    GAD-000 Compliance:
+    - Discoverability: Machine-readable capability description
+    - Observability: Returns full state and reasoning
+    - Parseability: Structured JSON output
+    - Composability: Output feeds into other tools
+    - Idempotency: Safe to retry
+    """
+
+    name = "ai_semantic_search"
+    description = "AI-native semantic search for verse discovery"
+
+    # Machine-readable capability description (GAD-000: Discoverability)
+    capabilities = {
+        "search_methods": ["bm25", "concept", "fts"],
+        "output_format": "structured_json",
+        "supports_expansion": True,
+        "provides_context": True,
+        "provides_followups": True,
+    }
+
+    def __init__(self, plugin_dir: Path):
+        self.plugin_dir = plugin_dir
+        self._db_path = plugin_dir / "knowledge" / "vedabase.db"
+        self._concepts_path = plugin_dir / "knowledge" / "concepts.yaml"
+        self._concepts = None
+        self._bm25 = None
+
+    def _ensure_loaded(self):
+        """Lazy load dependencies."""
+        if self._bm25 is None:
+            self._bm25 = BM25SearchTool(self.plugin_dir)
+
+        if self._concepts is None and self._concepts_path.exists():
+            with open(self._concepts_path) as f:
+                self._concepts = yaml.safe_load(f)
+
+    def _detect_concepts(self, query: str) -> List[Dict[str, Any]]:
+        """Detect which Gita concepts are in the query."""
+        if not self._concepts:
+            return []
+
+        detected = []
+        query_lower = query.lower()
+
+        for category, items in self._concepts.items():
+            if not isinstance(items, dict):
+                continue
+            for concept_name, data in items.items():
+                if not isinstance(data, dict):
+                    continue
+
+                aliases = data.get("aliases", [])
+                all_terms = [concept_name] + aliases
+
+                for term in all_terms:
+                    if isinstance(term, str) and term.lower() in query_lower:
+                        detected.append({
+                            "concept": concept_name,
+                            "category": category,
+                            "matched_term": term,
+                            "key_verses": data.get("key_verses", []),
+                            "name": data.get("name", concept_name),
+                        })
+                        break
+
+        return detected
+
+    def _get_chapter_context(self, verse_ids: List[str]) -> Dict[int, str]:
+        """Get chapter themes for context."""
+        if not self._concepts:
+            return {}
+
+        chapters = self._concepts.get("chapters", {})
+        verse_chapters = set()
+
+        for vid in verse_ids:
+            # Parse "BG 2.13" -> chapter 2
+            parts = vid.replace("BG ", "").split(".")
+            if parts:
+                try:
+                    verse_chapters.add(int(parts[0]))
+                except ValueError:
+                    pass
+
+        return {
+            ch: chapters.get(ch, {}).get("theme", "")
+            for ch in verse_chapters
+            if ch in chapters
+        }
+
+    def _suggest_followups(self, query: str, concepts: List[Dict], results: List[Dict]) -> List[Dict[str, str]]:
+        """Suggest follow-up actions for the AI operator."""
+        followups = []
+
+        # If concepts detected, suggest exploring key verses
+        for concept in concepts[:2]:
+            key_verses = concept.get("key_verses", [])
+            if key_verses:
+                followups.append({
+                    "action": "explore_key_verse",
+                    "verse_id": key_verses[0],
+                    "reason": f"Key verse for {concept['name']}",
+                })
+
+        # If results found, suggest getting full verse
+        if results:
+            followups.append({
+                "action": "get_full_verse",
+                "verse_id": results[0].get("verse_id"),
+                "reason": "Get complete translation and purport",
+            })
+
+        # Suggest related concepts
+        if concepts:
+            category = concepts[0].get("category")
+            followups.append({
+                "action": "explore_category",
+                "category": category,
+                "reason": f"Explore other {category} concepts",
+            })
+
+        return followups
+
+    def validate(self, parameters: Dict[str, Any]) -> None:
+        """Validate parameters."""
+        if "query" not in parameters:
+            raise ValueError("Missing required parameter: query")
+
+    def execute(self, parameters: Dict[str, Any]) -> ToolResult:
+        """
+        Execute AI-native semantic search.
+
+        Args:
+            parameters: {
+                "query": "What is the soul?",
+                "top_k": 5,
+                "include_context": True
+            }
+
+        Returns:
+            ToolResult with rich structured output for AI reasoning:
+            - matches: Found verses with scores
+            - concepts: Detected Gita concepts
+            - context: Chapter themes, related concepts
+            - followups: Suggested next actions
+            - reasoning: Explanation of search strategy
+        """
+        try:
+            self._ensure_loaded()
+
+            query = parameters["query"]
+            top_k = parameters.get("top_k", 5)
+            include_context = parameters.get("include_context", True)
+
+            # Step 1: Detect concepts in query
+            concepts = self._detect_concepts(query)
+
+            # Step 2: Execute BM25 search with expansion
+            bm25_result = self._bm25.execute({
+                "query": query,
+                "top_k": top_k,
+                "expand": True,
+            })
+
+            if not bm25_result.success:
+                return ToolResult(
+                    success=False,
+                    error=f"BM25 search failed: {bm25_result.error}",
+                )
+
+            matches = bm25_result.output.get("matches", [])
+            expansion = bm25_result.output.get("expansion_terms", [])
+
+            # Step 3: Build context
+            context = {}
+            if include_context and matches:
+                verse_ids = [m["verse_id"] for m in matches]
+                context["chapter_themes"] = self._get_chapter_context(verse_ids)
+                context["detected_concepts"] = [c["name"] for c in concepts]
+                context["expansion_used"] = expansion
+
+            # Step 4: Generate follow-ups
+            followups = self._suggest_followups(query, concepts, matches)
+
+            # Step 5: Build reasoning (for AI transparency)
+            reasoning = []
+            if expansion:
+                reasoning.append(f"Expanded query with {len(expansion)} terms from vedabase")
+            if concepts:
+                reasoning.append(f"Detected concepts: {[c['name'] for c in concepts]}")
+            reasoning.append(f"Found {len(matches)} matching verses using BM25")
+
+            return ToolResult(
+                success=True,
+                output={
+                    # Core results
+                    "matches": matches,
+                    "count": len(matches),
+
+                    # Semantic understanding
+                    "concepts": concepts,
+                    "expansion_terms": expansion,
+
+                    # Context for AI reasoning
+                    "context": context,
+                    "reasoning": reasoning,
+
+                    # Suggested next actions (GAD-000: Composability)
+                    "followups": followups,
+
+                    # Metadata
+                    "method": "ai_semantic",
+                    "query": query,
+                    "ml_required": False,
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"AI semantic search failed: {e}")
+            return ToolResult(
+                success=False,
+                error=str(e),
+                output={"error_type": type(e).__name__},
+            )
+
+
+# =============================================================================
 # TOOL REGISTRY
 # =============================================================================
 
@@ -930,6 +1175,7 @@ def get_semantic_tools(plugin_dir: Path) -> Dict[str, Any]:
         "fts_search": FTSSearchTool(plugin_dir),
         "bm25_search": BM25SearchTool(plugin_dir),
         "resonance_search": ResonanceSearchTool(plugin_dir),
+        "ai_semantic_search": AISemanticSearchTool(plugin_dir),
     }
 
 
@@ -944,6 +1190,7 @@ __all__ = [
     "FTSSearchTool",
     "BM25SearchTool",
     "ResonanceSearchTool",
+    "AISemanticSearchTool",
     "get_semantic_tools",
     "ToolResult",
 ]
