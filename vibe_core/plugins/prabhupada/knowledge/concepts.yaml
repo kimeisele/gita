@@ -1,0 +1,120 @@
+# Prabhupada Wisdom - Core Concepts
+# Used for semantic routing and concept-based search
+
+core_concepts:
+  # The Five Topics (Pancha-tattva of philosophy)
+  isvara:
+    name: "The Supreme Controller"
+    aliases: ["god", "krishna", "bhagavan", "supreme", "lord"]
+    key_verses: ["BG 7.7", "BG 10.8", "BG 15.17"]
+
+  jiva:
+    name: "The Living Entity"
+    aliases: ["soul", "atma", "self", "living being", "spirit soul"]
+    key_verses: ["BG 2.13", "BG 2.17", "BG 2.20", "BG 15.7"]
+
+  prakriti:
+    name: "Material Nature"
+    aliases: ["nature", "material", "matter", "maya", "energy"]
+    key_verses: ["BG 7.4", "BG 7.5", "BG 9.10", "BG 13.20"]
+
+  kala:
+    name: "Eternal Time"
+    aliases: ["time", "death", "eternal", "duration"]
+    key_verses: ["BG 10.30", "BG 10.33", "BG 11.32"]
+
+  karma:
+    name: "Activities"
+    aliases: ["action", "work", "duty", "reaction", "fruitive"]
+    key_verses: ["BG 3.5", "BG 3.9", "BG 4.17", "BG 18.2"]
+
+yoga_systems:
+  karma_yoga:
+    name: "Path of Action"
+    aliases: ["work", "duty", "action yoga", "nishkama karma"]
+    key_verses: ["BG 3.3", "BG 3.7", "BG 5.2"]
+    chapter: 3
+
+  jnana_yoga:
+    name: "Path of Knowledge"
+    aliases: ["knowledge", "wisdom", "philosophy", "sankhya"]
+    key_verses: ["BG 2.11", "BG 4.33", "BG 7.2"]
+    chapter: 4
+
+  dhyana_yoga:
+    name: "Path of Meditation"
+    aliases: ["meditation", "yoga", "concentration", "ashtanga"]
+    key_verses: ["BG 6.10", "BG 6.13", "BG 6.47"]
+    chapter: 6
+
+  bhakti_yoga:
+    name: "Path of Devotion"
+    aliases: ["devotion", "love", "service", "surrender"]
+    key_verses: ["BG 9.14", "BG 12.6-7", "BG 18.65-66"]
+    chapter: 12
+
+gunas:
+  sattva:
+    name: "Mode of Goodness"
+    aliases: ["goodness", "purity", "light", "knowledge"]
+    key_verses: ["BG 14.6", "BG 14.11", "BG 17.8"]
+
+  rajas:
+    name: "Mode of Passion"
+    aliases: ["passion", "activity", "desire", "ambition"]
+    key_verses: ["BG 14.7", "BG 14.12", "BG 17.9"]
+
+  tamas:
+    name: "Mode of Ignorance"
+    aliases: ["ignorance", "darkness", "inertia", "laziness"]
+    key_verses: ["BG 14.8", "BG 14.13", "BG 17.10"]
+
+life_topics:
+  death:
+    aliases: ["dying", "leaving body", "transmigration", "next life"]
+    key_verses: ["BG 2.13", "BG 2.22", "BG 8.5-6"]
+
+  mind_control:
+    aliases: ["mind", "control", "restless", "thoughts", "peace"]
+    key_verses: ["BG 6.5-6", "BG 6.26", "BG 6.35"]
+
+  anger:
+    aliases: ["angry", "rage", "wrath", "frustration"]
+    key_verses: ["BG 2.62-63", "BG 3.37", "BG 16.21"]
+
+  fear:
+    aliases: ["afraid", "anxiety", "worry", "fearless"]
+    key_verses: ["BG 2.56", "BG 4.10", "BG 18.30"]
+
+  desire:
+    aliases: ["lust", "want", "craving", "attachment"]
+    key_verses: ["BG 2.62", "BG 3.37", "BG 7.11"]
+
+  food:
+    aliases: ["eating", "diet", "vegetarian", "prasadam"]
+    key_verses: ["BG 3.13", "BG 9.26", "BG 17.8-10"]
+
+  work:
+    aliases: ["job", "career", "occupation", "livelihood"]
+    key_verses: ["BG 3.8", "BG 18.41-44", "BG 18.47"]
+
+# Chapter summaries for navigation
+chapters:
+  1: {name: "Observing the Armies", theme: "Arjuna's Dilemma"}
+  2: {name: "Contents of the Gita Summarized", theme: "Soul, Duty, Yoga"}
+  3: {name: "Karma-yoga", theme: "Action without Attachment"}
+  4: {name: "Transcendental Knowledge", theme: "Parampara, Avatar"}
+  5: {name: "Karma-yoga—Action in Krishna Consciousness", theme: "Renunciation vs Action"}
+  6: {name: "Dhyana-yoga", theme: "Meditation, Mind Control"}
+  7: {name: "Knowledge of the Absolute", theme: "Krishna's Energies"}
+  8: {name: "Attaining the Supreme", theme: "Remembering Krishna at Death"}
+  9: {name: "The Most Confidential Knowledge", theme: "Devotional Service"}
+  10: {name: "The Opulence of the Absolute", theme: "Krishna's Vibhutis"}
+  11: {name: "The Universal Form", theme: "Vishvarupa"}
+  12: {name: "Devotional Service", theme: "Bhakti-yoga"}
+  13: {name: "Nature, the Enjoyer, and Consciousness", theme: "Kshetra-Kshetrajna"}
+  14: {name: "The Three Modes of Material Nature", theme: "Gunas"}
+  15: {name: "The Yoga of the Supreme Person", theme: "Purushottama"}
+  16: {name: "The Divine and Demoniac Natures", theme: "Qualities"}
+  17: {name: "The Divisions of Faith", theme: "Types of Faith"}
+  18: {name: "Conclusion—The Perfection of Renunciation", theme: "Summary, Surrender"}

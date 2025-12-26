@@ -1,0 +1,94 @@
+# Cognitive Circuit: No Speculation Guard
+# Constitutional enforcement of the No Speculation Protocol
+
+circuit:
+  id: "prabhupada.no_speculation"
+  name: "No Speculation Guard"
+  description: "Verify all outputs comply with No Speculation Protocol"
+  version: "1.0.0"
+  type: "guard"  # This circuit validates other circuits
+
+# This guard is applied to ALL prabhupada.* outputs
+applies_to:
+  - "prabhupada.*"
+
+checks:
+  # Check 1: All claims must have citations
+  citation_required:
+    description: "Every claim must cite SRUTI"
+    check: |
+      output.citations.length > 0 OR
+      output.status == 'no_answer' OR
+      output.status == 'rejected'
+    on_violation:
+      action: "reject"
+      message: "No Speculation Protocol: Claim without citation"
+      severity: "DHARMA_VIOLATION"
+
+  # Check 2: Speculation score must be below threshold
+  speculation_threshold:
+    description: "Speculation score must be below 0.1"
+    check: "output.speculation_score < 0.1"
+    on_violation:
+      action: "admit_ignorance"
+      message: "No Speculation Protocol: Speculation detected"
+      severity: "HIGH"
+
+  # Check 3: SRUTI must be unmodified
+  sruti_immutability:
+    description: "SRUTI citations must match database exactly"
+    check: "verify_sruti_integrity(output.citations)"
+    on_violation:
+      action: "reject"
+      message: "No Speculation Protocol: SRUTI tampering detected"
+      severity: "DHARMA_VIOLATION"
+
+  # Check 4: SMRITI must serve SRUTI
+  smriti_subordination:
+    description: "SMRITI synthesis must not contradict SRUTI"
+    check: "smriti_aligns_with_sruti(output.smriti, output.sruti)"
+    on_violation:
+      action: "reject"
+      message: "No Speculation Protocol: SMRITI contradicts SRUTI"
+      severity: "HIGH"
+
+# Violation responses
+responses:
+  reject:
+    description: "Completely reject the output"
+    action: |
+      return {
+        "status": "rejected",
+        "error": violation.message,
+        "protocol": "No Speculation"
+      }
+
+  admit_ignorance:
+    description: "Replace with honest admission"
+    action: |
+      return {
+        "status": "no_answer",
+        "message": "I cannot provide a definitive answer based on scripture.",
+        "note": "The No Speculation Protocol prevents speculation.",
+        "original_query": input.query
+      }
+
+  warn:
+    description: "Allow but flag for review"
+    action: |
+      output.warnings = output.warnings or []
+      output.warnings.append(violation.message)
+      return output
+
+# Logging
+karma:
+  - event: "SPECULATION_CHECK"
+    details:
+      - speculation_score
+      - citations_count
+      - passed
+  - event: "VIOLATION_DETECTED"
+    details:
+      - check_name
+      - severity
+      - action_taken

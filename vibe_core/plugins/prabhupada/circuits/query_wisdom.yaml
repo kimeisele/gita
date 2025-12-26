@@ -1,0 +1,108 @@
+# Cognitive Circuit: Query Wisdom
+# Implements the SRUTI → SMRITI pipeline with No Speculation
+
+circuit:
+  id: "prabhupada.query_wisdom"
+  name: "Query Wisdom Circuit"
+  description: "Process wisdom queries through SRUTI/SMRITI layers"
+  version: "1.0.0"
+
+states:
+  - id: "RECEIVE_QUERY"
+    description: "Receive and validate user query"
+    invariants:
+      - "query.text is not empty"
+      - "query.length < 1000"
+    transitions:
+      - on: "query_valid"
+        to: "SEARCH_SRUTI"
+      - on: "query_invalid"
+        to: "REJECT_QUERY"
+
+  - id: "SEARCH_SRUTI"
+    description: "Search immutable scripture database"
+    syscall: "prabhupada.search_semantic"
+    parameters:
+      query: "${input.query}"
+      limit: 5
+    invariants:
+      - "results.source == 'vedabase.db'"
+      - "results.all_verses_have_id"
+    transitions:
+      - on: "found"
+        condition: "results.count > 0"
+        to: "SYNTHESIZE_SMRITI"
+      - on: "not_found"
+        condition: "results.count == 0"
+        to: "ADMIT_IGNORANCE"
+
+  - id: "SYNTHESIZE_SMRITI"
+    description: "Generate synthesis citing SRUTI"
+    syscall: "prabhupada.synthesize"
+    parameters:
+      sruti_results: "${state.sruti_results}"
+      query: "${input.query}"
+    invariants:
+      # NO SPECULATION - All claims must cite SRUTI
+      - "synthesis.citations.length > 0"
+      - "synthesis.all_citations_from_sruti"
+      - "synthesis.speculation_score < 0.1"
+    transitions:
+      - on: "synthesis_valid"
+        condition: "synthesis.speculation_score < 0.1"
+        to: "RESPOND"
+      - on: "speculation_detected"
+        condition: "synthesis.speculation_score >= 0.1"
+        to: "ADMIT_IGNORANCE"
+
+  - id: "ADMIT_IGNORANCE"
+    description: "Gracefully admit when we cannot answer"
+    response:
+      status: "no_answer"
+      message: "I could not find a scriptural basis for answering this query."
+      note: "The No Speculation Protocol prevents me from speculating."
+    transitions:
+      - on: "complete"
+        to: "END"
+
+  - id: "REJECT_QUERY"
+    description: "Reject invalid query"
+    response:
+      status: "rejected"
+      error: "Invalid query format"
+    transitions:
+      - on: "complete"
+        to: "END"
+
+  - id: "RESPOND"
+    description: "Return validated response"
+    response:
+      status: "success"
+      sruti: "${state.sruti_results}"
+      smriti: "${state.synthesis}"
+      confidence: "${state.confidence}"
+    transitions:
+      - on: "complete"
+        to: "END"
+
+  - id: "END"
+    description: "Circuit complete"
+    terminal: true
+
+# Dharma: These invariants can NEVER be violated
+dharma:
+  - "Never generate claims without scriptural citation"
+  - "Never present speculation as fact"
+  - "Always prefer admitting ignorance over guessing"
+  - "SRUTI is immutable - never modify scripture"
+
+# Karma: Actions that create ledger entries
+karma:
+  - event: "QUERY_RECEIVED"
+    on_state: "RECEIVE_QUERY"
+  - event: "SRUTI_SEARCHED"
+    on_state: "SEARCH_SRUTI"
+  - event: "SYNTHESIS_GENERATED"
+    on_state: "SYNTHESIZE_SMRITI"
+  - event: "RESPONSE_SENT"
+    on_state: "RESPOND"
