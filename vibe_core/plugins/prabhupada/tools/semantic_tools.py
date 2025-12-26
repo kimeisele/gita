@@ -495,11 +495,13 @@ class BM25SearchTool:
     def __init__(self, plugin_dir: Path):
         self.plugin_dir = plugin_dir
         self._db_path = plugin_dir / "knowledge" / "vedabase.db"
+        self._concepts_path = plugin_dir / "knowledge" / "concepts.yaml"
         self._corpus = None
         self._verse_ids = None
         self._avgdl = 0
         self._idf = {}
         self._doc_lens = []
+        self._synonyms = None  # Query expansion synonyms
 
     def _tokenize(self, text: str) -> List[str]:
         """Simple tokenization - lowercase and split."""
@@ -556,6 +558,62 @@ class BM25SearchTool:
 
         logger.info(f"BM25 index built: {N} documents, {len(self._idf)} unique terms")
 
+    def _build_synonyms(self):
+        """Build synonym map from concepts.yaml for query expansion."""
+        if self._synonyms is not None:
+            return
+
+        self._synonyms = {}  # word -> [synonyms]
+
+        if not self._concepts_path.exists():
+            logger.warning(f"Concepts file not found: {self._concepts_path}")
+            return
+
+        with open(self._concepts_path) as f:
+            concepts = yaml.safe_load(f)
+
+        for category, items in concepts.items():
+            if not isinstance(items, dict):
+                continue
+            for concept_name, data in items.items():
+                if isinstance(data, dict):
+                    aliases = data.get("aliases", [])
+                elif isinstance(data, list):
+                    aliases = data
+                else:
+                    continue
+
+                # Filter out non-string values and build bidirectional mapping
+                all_terms = [str(concept_name)]
+                for a in aliases:
+                    if isinstance(a, str):
+                        all_terms.append(a.lower())
+
+                for term in all_terms:
+                    term_lower = term.lower()
+                    if term_lower not in self._synonyms:
+                        self._synonyms[term_lower] = set()
+                    # Add all other terms as synonyms
+                    for other in all_terms:
+                        other_lower = other.lower()
+                        if other_lower != term_lower:
+                            self._synonyms[term_lower].add(other_lower)
+
+        logger.info(f"Synonym map built: {len(self._synonyms)} terms with expansions")
+
+    def _expand_query(self, query: str) -> List[str]:
+        """Expand query with synonyms from concepts.yaml."""
+        self._build_synonyms()
+
+        words = query.lower().split()
+        expanded = set(words)
+
+        for word in words:
+            if word in self._synonyms:
+                expanded.update(self._synonyms[word])
+
+        return list(expanded)
+
     def _bm25_score(self, query_tokens: List[str], doc_idx: int) -> float:
         """Compute BM25 score for a document."""
         import math
@@ -605,8 +663,16 @@ class BM25SearchTool:
 
             query = parameters["query"]
             top_k = parameters.get("top_k", 10)
+            expand = parameters.get("expand", True)  # Enable query expansion by default
 
-            query_tokens = self._tokenize(query)
+            # Expand query with synonyms if enabled
+            if expand:
+                expanded_terms = self._expand_query(query)
+                query_text = " ".join(expanded_terms)
+            else:
+                query_text = query
+
+            query_tokens = self._tokenize(query_text)
 
             if not query_tokens:
                 return ToolResult(
@@ -634,7 +700,7 @@ class BM25SearchTool:
                     "translation": translation[:200],
                 })
 
-            logger.info(f"BM25 search: {len(matches)} matches for '{query}'")
+            logger.info(f"BM25 search: {len(matches)} matches for '{query}' (expanded: {expand})")
 
             return ToolResult(
                 success=True,
@@ -642,7 +708,10 @@ class BM25SearchTool:
                     "matches": matches,
                     "count": len(matches),
                     "method": "bm25",
+                    "original_query": query,
                     "query_terms": query_tokens,
+                    "expanded": expand,
+                    "expansion_terms": expanded_terms if expand else [query],
                     "ml_required": False,  # Key differentiator!
                 },
             )
